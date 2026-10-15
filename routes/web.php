@@ -25,12 +25,10 @@ Route::get('/contact', function () {
     return view('contact');
 })->name('contact');
 
-//มาจากคำสั่ง php artisan 
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
-    'verified'
-
+    'verified',
 ])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
@@ -39,13 +37,12 @@ Route::middleware([
     Route::get('/users', function () {
         return view('users');
     })->name('users');
-    
-     Route::get('/adduser', function () {
+
+    Route::get('/adduser', function () {
         return view('adduser');
     })->name('adduser');
 
-     Route::get('/edituser/{id}', function ($id) {
-        return view('edituser',compact('id'));
+    Route::get('/edituser/{id}', function ($id) {
+        return view('edituser', compact('id'));
     })->name('edituser');
-    
 });
