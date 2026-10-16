@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 
 class ArticleController extends Controller
 {
+    // ตรงนี้เอาข่าวทั้งหมดมาแสดง ไม่ต้องส่ง ID
     public function index()
     {
         $articles = Article::all();
@@ -18,6 +19,7 @@ class ArticleController extends Controller
         ], 200);
     }
 
+    // ตอนเพิ่มข่าว เช็กก่อนว่ามีหัวข้อ เนื้อหา และหมวดหมู่ครบไหม
     public function store(Request $request)
     {
         $request->validate([
@@ -26,6 +28,7 @@ class ArticleController extends Controller
             'category' => 'required|string',
         ]);
 
+        // ถ้าไม่ได้ส่งชื่อคนเขียนมา ก็ใส่ Admin ให้เป็นค่าเริ่มต้น
         $article = Article::create([
             'title' => $request->title,
             'content' => $request->content,
@@ -41,6 +44,7 @@ class ArticleController extends Controller
         ], 201);
     }
 
+    // รับ ID มาแล้วหาข่าว ถ้าหาไม่เจอก็แจ้งกลับว่าไม่มีข้อมูล
     public function show($id)
     {
         $article = Article::find($id);
@@ -58,6 +62,7 @@ class ArticleController extends Controller
         ], 200);
     }
 
+    // หาข่าวจาก ID ก่อน แล้วค่อยแก้ตามข้อมูลที่ส่งมา
     public function update(Request $request, $id)
     {
         $article = Article::find($id);
@@ -69,7 +74,22 @@ class ArticleController extends Controller
             ], 404);
         }
 
-        $article->update($request->all());
+        $validated = $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'content' => 'sometimes|required|string',
+            'category' => 'sometimes|required|string',
+            'image_url' => 'sometimes|nullable|string|max:2048',
+            'author' => 'sometimes|nullable|string|max:255',
+        ]);
+
+        if ($validated === []) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'กรุณาส่งข้อมูลที่ต้องการแก้ไข',
+            ], 422);
+        }
+
+        $article->update($validated);
 
         return response()->json([
             'status' => 'success',
@@ -78,6 +98,7 @@ class ArticleController extends Controller
         ], 200);
     }
 
+    // หาข่าวจาก ID แล้วลบออก ถ้าไม่มีข่าว ID นี้ก็แจ้งว่าไม่เจอ
     public function destroy($id)
     {
         $article = Article::find($id);

@@ -9,8 +9,10 @@ use Tests\TestCase;
 
 class ArticleApiTest extends TestCase
 {
+    // เริ่มแต่ละรอบด้วยฐานข้อมูลใหม่ จะได้ไม่เอาข้อมูลเก่ามาปน
     use RefreshDatabase;
 
+    // ลองดูข่าวทั้งหมดกับดูข่าวตาม ID แบบที่ยังไม่ต้องล็อกอิน
     public function test_articles_can_be_listed_and_retrieved_by_id_without_authentication()
     {
         $article = $this->createArticle();
@@ -25,6 +27,7 @@ class ArticleApiTest extends TestCase
             ->assertJsonPath('data.id', $article->id);
     }
 
+    // ลองเพิ่ม แก้ ลบ ตอนยังไม่ล็อกอินต้องไม่ได้ แต่พอล็อกอินแล้วต้องทำได้
     public function test_article_mutations_require_authentication_and_support_crud()
     {
         $this->postJson('/api/articles', [
@@ -55,6 +58,10 @@ class ArticleApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated API article');
+        $this->assertDatabaseHas('articles', [
+            'id' => $article->id,
+            'title' => 'Updated API article',
+        ]);
 
         $this->deleteJson('/api/articles/'.$article->id)
             ->assertOk()
@@ -63,6 +70,23 @@ class ArticleApiTest extends TestCase
         $this->assertDatabaseMissing('articles', ['id' => $article->id]);
     }
 
+    public function test_article_update_rejects_an_empty_payload()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user, 'sanctum');
+        $article = $this->createArticle();
+
+        $this->putJson('/api/articles/'.$article->id, [])
+            ->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+
+        $this->assertDatabaseHas('articles', [
+            'id' => $article->id,
+            'title' => 'Test article',
+        ]);
+    }
+
+    // ลองล็อกอินเอา token ไปเรียก API แล้วเช็กว่าล็อกเอาต์แล้ว token ใช้ไม่ได้
     public function test_login_issues_a_token_and_logout_revokes_it()
     {
         $user = User::factory()->create([
@@ -98,6 +122,7 @@ class ArticleApiTest extends TestCase
             ->assertUnauthorized();
     }
 
+    // เช็กว่าไม่มีทางลัดให้สร้าง API token ผ่าน session นี้
     public function test_api_token_cannot_be_issued_from_a_web_session()
     {
         $user = User::factory()->create();
@@ -109,6 +134,7 @@ class ArticleApiTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
+    // ทำข่าวตัวอย่างไว้ให้ test อื่นเอาไปใช้
     private function createArticle(): Article
     {
         return Article::create([
